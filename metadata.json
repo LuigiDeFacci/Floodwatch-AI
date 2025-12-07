@@ -1,0 +1,8 @@
+{
+  "name": "FLOODWATCH LIVE",
+  "description": "Real-time flood risk estimation using meteorological data and heuristic analysis.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
