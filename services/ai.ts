@@ -4,14 +4,26 @@ import { RiskAnalysis, GeoLocation, Language } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+/**
+ * GEMINI API INTEGRATION
+ * 
+ * We use prompt engineering to get Gemini to act as an expert hydrologist.
+ * Instead of just "summarizing", we ask it to reason about the *interaction* 
+ * between soil saturation and forecast rain.
+ */
+
 export const generateAIReport = async (
   location: GeoLocation,
   risk: RiskAnalysis,
   lang: Language = 'en'
 ): Promise<string> => {
-  const languageInstruction = lang === 'pt' 
-    ? "OUTPUT LANGUAGE: PORTUGUESE (PT-BR). Answer strictly in Portuguese." 
-    : "OUTPUT LANGUAGE: ENGLISH. Answer strictly in English.";
+  let languageInstruction = "OUTPUT LANGUAGE: ENGLISH. Answer strictly in English.";
+  
+  if (lang === 'pt') {
+    languageInstruction = "OUTPUT LANGUAGE: PORTUGUESE (PT-BR). Answer strictly in Portuguese.";
+  } else if (lang === 'es') {
+    languageInstruction = "OUTPUT LANGUAGE: SPANISH (ES). Answer strictly in Spanish.";
+  }
 
   const prompt = `
     You are an expert hydrologist and emergency response coordinator. 
@@ -51,7 +63,10 @@ export const generateAIReport = async (
 };
 
 export const findEmergencyResources = async (locationString: string, lang: Language = 'en') => {
-  const languageInstruction = lang === 'pt' ? "in Portuguese" : "in English";
+  let languageInstruction = "in English";
+  if (lang === 'pt') languageInstruction = "in Portuguese";
+  else if (lang === 'es') languageInstruction = "in Spanish";
+
   const prompt = `Find 3 major hospitals, emergency rooms, or designated evacuation shelters in or near ${locationString}. List them with a very brief description of what they are ${languageInstruction}.`;
 
   try {
@@ -74,9 +89,13 @@ export const findEmergencyResources = async (locationString: string, lang: Langu
 };
 
 export const analyzeFloodImage = async (base64Image: string, mimeType: string, lang: Language = 'en'): Promise<string> => {
-  const languageInstruction = lang === 'pt' 
-  ? "Translate your response to PORTUGUESE (PT-BR). Format: **VEREDITO:** [PERIGO / ALERTA / SEGURO], **OBSERVAÇÃO:**, **CONSELHO:**" 
-  : "Format: **VERDICT:** [DANGER / WARNING / SAFE], **OBSERVATION:**, **ADVICE:**";
+  let languageInstruction = "Format: **VERDICT:** [DANGER / WARNING / SAFE], **OBSERVATION:**, **ADVICE:**";
+  
+  if (lang === 'pt') {
+    languageInstruction = "Translate your response to PORTUGUESE (PT-BR). Format: **VEREDITO:** [PERIGO / ALERTA / SEGURO], **OBSERVAÇÃO:**, **CONSELHO:**";
+  } else if (lang === 'es') {
+    languageInstruction = "Translate your response to SPANISH. Format: **VEREDICTO:** [PELIGRO / ADVERTENCIA / SEGURO], **OBSERVACIÓN:**, **CONSEJO:**";
+  }
 
   const prompt = `
     Analyze this image for flood hazards and water safety.

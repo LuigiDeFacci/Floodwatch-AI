@@ -285,6 +285,10 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
 
     const forecast = [];
     const limit = Math.min(startIndex + 5, floodData.daily.time.length);
+    
+    let locale = 'en-US';
+    if (language === 'pt') locale = 'pt-BR';
+    else if (language === 'es') locale = 'es-ES';
 
     for (let i = startIndex; i < limit; i++) {
         const val = floodData.daily.river_discharge[i];
@@ -306,7 +310,7 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
         }
 
         const dateObj = new Date(floodData.daily.time[i]);
-        const dayLabel = i === startIndex ? t.map.today : i === startIndex + 1 ? t.map.tomorrow : dateObj.toLocaleDateString(language === 'pt' ? 'pt-BR' : 'en-US', {weekday: 'short'});
+        const dayLabel = i === startIndex ? t.map.today : i === startIndex + 1 ? t.map.tomorrow : dateObj.toLocaleDateString(locale, {weekday: 'short'});
 
         forecast.push({ day: dayLabel, value: val, statusColor, trendIcon });
     }

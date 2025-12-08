@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { RiskLevel } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -25,12 +24,30 @@ const RiskGauge: React.FC<RiskGaugeProps> = ({ score, level }) => {
   }
 
   // Translation mapping for Risk Levels
-  const levelText = language === 'pt' ? {
-    [RiskLevel.LOW]: 'BAIXO',
-    [RiskLevel.MODERATE]: 'MODERADO',
-    [RiskLevel.HIGH]: 'ALTO',
-    [RiskLevel.CRITICAL]: 'CRÍTICO'
-  }[level] : level;
+  let levelText: string = level;
+  if (language === 'pt') {
+    levelText = {
+        [RiskLevel.LOW]: 'BAIXO',
+        [RiskLevel.MODERATE]: 'MODERADO',
+        [RiskLevel.HIGH]: 'ALTO',
+        [RiskLevel.CRITICAL]: 'CRÍTICO'
+      }[level];
+  } else if (language === 'es') {
+    levelText = {
+        [RiskLevel.LOW]: 'BAJO',
+        [RiskLevel.MODERATE]: 'MODERADO',
+        [RiskLevel.HIGH]: 'ALTO',
+        [RiskLevel.CRITICAL]: 'CRÍTICO'
+      }[level];
+  }
+
+  let subText = 'Estimated heuristic score based on precipitation.';
+  if (language === 'pt') subText = 'Estimativa baseada em precipitação.';
+  else if (language === 'es') subText = 'Estimación heurística basada en precipitación.';
+
+  let riskLabel = 'RISK';
+  if (language === 'pt') riskLabel = 'RISCO';
+  else if (language === 'es') riskLabel = 'RIESGO';
 
   return (
     <div className="flex flex-col items-center justify-center p-6 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
@@ -52,10 +69,10 @@ const RiskGauge: React.FC<RiskGaugeProps> = ({ score, level }) => {
       </div>
       
       <h3 className={`text-2xl font-bold uppercase tracking-wide ${textColorClass}`}>
-        {levelText} {language === 'pt' ? 'RISCO' : 'RISK'}
+        {levelText} {riskLabel}
       </h3>
       <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 text-center max-w-xs">
-        {language === 'pt' ? 'Estimativa baseada em precipitação.' : 'Estimated heuristic score based on precipitation.'}
+        {subText}
       </p>
     </div>
   );

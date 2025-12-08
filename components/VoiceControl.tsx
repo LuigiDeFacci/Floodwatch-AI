@@ -22,8 +22,10 @@ const VoiceControl: React.FC<VoiceControlProps> = ({ onSearch, readOutText }) =>
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
-      recognitionRef.current.lang = language === 'pt' ? 'pt-BR' : 'en-US';
       recognitionRef.current.interimResults = false;
+      
+      // Initial lang
+      updateRecognitionLang();
 
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript.toLowerCase();
@@ -45,11 +47,17 @@ const VoiceControl: React.FC<VoiceControlProps> = ({ onSearch, readOutText }) =>
     }
   }, [onSearch, readOutText, language]);
 
+  const updateRecognitionLang = () => {
+    if (recognitionRef.current) {
+        if (language === 'pt') recognitionRef.current.lang = 'pt-BR';
+        else if (language === 'es') recognitionRef.current.lang = 'es-ES';
+        else recognitionRef.current.lang = 'en-US';
+    }
+  };
+
   // Update lang dynamically
   useEffect(() => {
-    if (recognitionRef.current) {
-        recognitionRef.current.lang = language === 'pt' ? 'pt-BR' : 'en-US';
-    }
+    updateRecognitionLang();
   }, [language]);
 
   useEffect(() => {
@@ -63,9 +71,16 @@ const VoiceControl: React.FC<VoiceControlProps> = ({ onSearch, readOutText }) =>
     console.log("Voice Command:", text);
     
     // Multi-lingual command parsing
-    const isSearch = text.includes('search') || text.includes('check') || text.includes('pesquisar') || text.includes('buscar');
-    const isReport = text.includes('report') || text.includes('read') || text.includes('relatório') || text.includes('ler');
-    const isStop = text.includes('stop') || text.includes('quiet') || text.includes('parar') || text.includes('silêncio');
+    const isSearch = text.includes('search') || text.includes('check') || 
+                     text.includes('pesquisar') || text.includes('buscar');
+                     
+    const isReport = text.includes('report') || text.includes('read') || 
+                     text.includes('relatório') || text.includes('ler') ||
+                     text.includes('reporte');
+                     
+    const isStop = text.includes('stop') || text.includes('quiet') || 
+                   text.includes('parar') || text.includes('silêncio') ||
+                   text.includes('silencio') || text.includes('detener');
 
     if (isSearch) {
       // Remove keywords to find city name
@@ -75,31 +90,47 @@ const VoiceControl: React.FC<VoiceControlProps> = ({ onSearch, readOutText }) =>
         .trim();
       
       if (city.length > 2) {
-        speak(language === 'pt' ? `Pesquisando por ${city}` : `Searching for ${city}`);
+        let msg = `Searching for ${city}`;
+        if (language === 'pt') msg = `Pesquisando por ${city}`;
+        else if (language === 'es') msg = `Buscando ${city}`;
+        
+        speak(msg);
         onSearch(city);
       } else {
-        speak(language === 'pt' ? "Não entendi o nome da cidade." : "I didn't catch the city name.");
+        let msg = "I didn't catch the city name.";
+        if (language === 'pt') msg = "Não entendi o nome da cidade.";
+        else if (language === 'es') msg = "No entendí el nombre de la ciudad.";
+        speak(msg);
       }
     } 
     else if (isReport) {
       if (readOutText) {
         speak(readOutText);
       } else {
-        speak(language === 'pt' ? "Nenhum relatório disponível." : "No report available yet.");
+        let msg = "No report available yet.";
+        if (language === 'pt') msg = "Nenhum relatório disponível.";
+        else if (language === 'es') msg = "No hay reporte disponible.";
+        speak(msg);
       }
     }
     else if (isStop) {
         window.speechSynthesis.cancel();
     }
     else {
-        speak(language === 'pt' ? "Desculpe, não entendi." : "Sorry, I didn't understand.");
+        let msg = "Sorry, I didn't understand.";
+        if (language === 'pt') msg = "Desculpe, não entendi.";
+        else if (language === 'es') msg = "Lo siento, no entendí.";
+        speak(msg);
     }
   };
 
   const speak = (text: string) => {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language === 'pt' ? 'pt-BR' : 'en-US';
+    if (language === 'pt') utterance.lang = 'pt-BR';
+    else if (language === 'es') utterance.lang = 'es-ES';
+    else utterance.lang = 'en-US';
+    
     window.speechSynthesis.speak(utterance);
     setIsSpeaking(true);
   };

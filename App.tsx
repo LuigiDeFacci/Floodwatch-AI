@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, CloudRain, AlertTriangle, ShieldCheck, Info, Camera, Download, Waves, Droplets, Moon, Sun, Heart, Globe } from 'lucide-react';
+import { Search, MapPin, CloudRain, AlertTriangle, ShieldCheck, Info, Camera, Download, Waves, Droplets, Moon, Sun, Heart, Globe, ChevronDown } from 'lucide-react';
 import { GeoLocation, WeatherData, RiskAnalysis, FloodData } from './types';
 import { geocodeLocation, fetchWeatherData, searchCities, fetchFloodData } from './services/api';
 import { calculateFloodRisk } from './services/riskModel';
@@ -30,6 +30,10 @@ const App: React.FC = () => {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const languageDropdownRef = useRef<HTMLDivElement>(null);
+
   const [isSharing, setIsSharing] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
 
@@ -58,14 +62,13 @@ const App: React.FC = () => {
     setDarkMode(!darkMode);
   };
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'pt' : 'en');
-  };
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
+      }
+      if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target as Node)) {
+        setShowLanguageDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -250,14 +253,42 @@ const App: React.FC = () => {
               <span className="hidden sm:inline">{t.header.mission}</span>
               <span className="sm:hidden">{t.header.about}</span>
             </button>
-            <button 
-              onClick={toggleLanguage}
-              className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-bold text-xs"
-              title="Switch Language"
-            >
-              <Globe className="w-4 h-4" />
-              {language.toUpperCase()}
-            </button>
+            
+            <div className="relative" ref={languageDropdownRef}>
+              <button 
+                onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-bold text-xs"
+                title="Switch Language"
+              >
+                <Globe className="w-4 h-4" />
+                {language.toUpperCase()}
+                <ChevronDown className="w-3 h-3 ml-0.5 opacity-50" />
+              </button>
+              
+              {showLanguageDropdown && (
+                <div className="absolute right-0 mt-2 w-36 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50 animate-fade-in">
+                    <button 
+                        onClick={() => { setLanguage('en'); setShowLanguageDropdown(false); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between ${language === 'en' ? 'font-bold text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-slate-700 dark:text-slate-300'}`}
+                    >
+                        English {language === 'en' && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400"></span>}
+                    </button>
+                    <button 
+                        onClick={() => { setLanguage('pt'); setShowLanguageDropdown(false); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between ${language === 'pt' ? 'font-bold text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-slate-700 dark:text-slate-300'}`}
+                    >
+                        Português {language === 'pt' && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400"></span>}
+                    </button>
+                    <button 
+                        onClick={() => { setLanguage('es'); setShowLanguageDropdown(false); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between ${language === 'es' ? 'font-bold text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-slate-700 dark:text-slate-300'}`}
+                    >
+                        Español {language === 'es' && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400"></span>}
+                    </button>
+                </div>
+              )}
+            </div>
+
             <button 
               onClick={toggleDarkMode}
               className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"

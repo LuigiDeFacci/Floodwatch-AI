@@ -23,7 +23,10 @@ const AIReport: React.FC<AIReportProps> = ({ location, risk }) => {
       const text = await generateAIReport(location, risk, language);
       setReport(text);
     } catch (err) {
-      setError(language === 'pt' ? "Serviço ocupado. Tente novamente." : "AI service is currently busy. Please try again.");
+      let msg = "AI service is currently busy. Please try again.";
+      if (language === 'pt') msg = "Serviço ocupado. Tente novamente.";
+      else if (language === 'es') msg = "Servicio ocupado. Intente de nuevo.";
+      setError(msg);
     } finally {
       setLoading(false);
     }

@@ -23,6 +23,10 @@ const RainChart: React.FC<RainChartProps> = ({ weather, darkMode = false }) => {
 
   const precipData = weather.hourly.precipitation || [];
 
+  let locale = 'en-US';
+  if (language === 'pt') locale = 'pt-BR';
+  else if (language === 'es') locale = 'es-ES';
+
   for (let i = startIdx; i < endIdx; i++) {
     const time = new Date(weather.hourly.time[i]);
     const isForecast = i >= pivot;
@@ -30,12 +34,12 @@ const RainChart: React.FC<RainChartProps> = ({ weather, darkMode = false }) => {
     const label = i === pivot 
         ? t.chart.now 
         : time.getHours() === 12 
-            ? time.toLocaleDateString(language === 'pt' ? 'pt-BR' : 'en-US', { weekday: 'short' })
+            ? time.toLocaleDateString(locale, { weekday: 'short' })
             : '';
 
     data.push({
       time: label,
-      fullTime: time.toLocaleString(language === 'pt' ? 'pt-BR' : 'en-US'),
+      fullTime: time.toLocaleString(locale),
       precipitation: precipData[i] || 0,
       isForecast
     });

@@ -1,5 +1,5 @@
 
-export type Language = 'en' | 'pt';
+export type Language = 'en' | 'pt' | 'es';
 
 export interface GeoLocation {
   id: number;

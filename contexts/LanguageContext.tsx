@@ -19,6 +19,8 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     const browserLang = navigator.language.toLowerCase();
     if (browserLang.includes('pt')) {
       setLanguage('pt');
+    } else if (browserLang.includes('es')) {
+      setLanguage('es');
     }
   }, []);
 

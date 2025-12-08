@@ -16,7 +16,10 @@ const FloodVision: React.FC = () => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        setError(language === 'pt' ? "Imagem muito grande." : "Image size too large.");
+        let msg = "Image size too large.";
+        if (language === 'pt') msg = "Imagem muito grande.";
+        else if (language === 'es') msg = "Imagen demasiado grande.";
+        setError(msg);
         return;
       }
       
@@ -41,7 +44,10 @@ const FloodVision: React.FC = () => {
       const result = await analyzeFloodImage(image, mimeType, language);
       setAnalysis(result);
     } catch (err) {
-      setError(language === 'pt' ? "Falha na análise. Tente novamente." : "AI analysis failed. Please check your connection and try again.");
+      let msg = "AI analysis failed. Please check your connection and try again.";
+      if (language === 'pt') msg = "Falha na análise. Tente novamente.";
+      else if (language === 'es') msg = "Falló el análisis de IA. Intente de nuevo.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -55,8 +61,8 @@ const FloodVision: React.FC = () => {
   };
 
   const getVerdictStyle = (text: string) => {
-    const isDanger = text.includes('DANGER') || text.includes('PERIGO');
-    const isWarning = text.includes('WARNING') || text.includes('ALERTA');
+    const isDanger = text.includes('DANGER') || text.includes('PERIGO') || text.includes('PELIGRO');
+    const isWarning = text.includes('WARNING') || text.includes('ALERTA') || text.includes('ADVERTENCIA');
     const isSafe = text.includes('SAFE') || text.includes('SEGURO');
 
     if (isDanger) return 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200';
@@ -138,7 +144,7 @@ const FloodVision: React.FC = () => {
       {analysis && (
         <div className={`mt-4 p-4 rounded-xl border ${getVerdictStyle(analysis)} animate-fade-in`}>
           <div className="flex items-start gap-3">
-            {analysis.includes('DANGER') || analysis.includes('PERIGO') ? (
+            {analysis.includes('DANGER') || analysis.includes('PERIGO') || analysis.includes('PELIGRO') ? (
               <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
             ) : (
               <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />

@@ -27,7 +27,10 @@ const EmergencyFinder: React.FC<EmergencyFinderProps> = ({ locationName }) => {
           chunks: result.groundingMetadata?.groundingChunks || []
         });
       } catch (err) {
-        setError(language === 'pt' ? "Não foi possível localizar recursos." : "Could not locate resources. Please use a local map app.");
+        let msg = "Could not locate resources. Please use a local map app.";
+        if (language === 'pt') msg = "Não foi possível localizar recursos.";
+        else if (language === 'es') msg = "No se pudieron localizar recursos.";
+        setError(msg);
       } finally {
         setLoading(false);
       }
