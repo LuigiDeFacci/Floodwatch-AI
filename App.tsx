@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, CloudRain, AlertTriangle, ShieldCheck, Info, Camera, Download, Waves, Droplets, Moon, Sun, Heart, Globe, ChevronDown } from 'lucide-react';
-import { GeoLocation, WeatherData, RiskAnalysis, FloodData } from './types';
+import { GeoLocation, WeatherData, RiskAnalysis, FloodData, RiskLevel } from './types';
 import { geocodeLocation, fetchWeatherData, searchCities, fetchFloodData } from './services/api';
 import { calculateFloodRisk } from './services/riskModel';
 import RiskGauge from './components/RiskGauge';
@@ -233,13 +233,37 @@ const App: React.FC = () => {
       return intro;
   };
 
+  // Dynamic Background based on Risk
+  const getRiskBackground = () => {
+      if (!result) return darkMode ? 'bg-slate-950' : 'bg-slate-50';
+      const { level } = result.risk;
+      
+      if (darkMode) {
+          switch (level) {
+              case RiskLevel.LOW: return 'bg-gradient-to-br from-emerald-950 to-slate-950';
+              case RiskLevel.MODERATE: return 'bg-gradient-to-br from-amber-950 to-slate-950';
+              case RiskLevel.HIGH: return 'bg-gradient-to-br from-orange-950 to-slate-950';
+              case RiskLevel.CRITICAL: return 'bg-gradient-to-br from-red-950 to-slate-950';
+              default: return 'bg-slate-950';
+          }
+      } else {
+          switch (level) {
+              case RiskLevel.LOW: return 'bg-gradient-to-br from-emerald-50 to-blue-50';
+              case RiskLevel.MODERATE: return 'bg-gradient-to-br from-amber-50 to-orange-50';
+              case RiskLevel.HIGH: return 'bg-gradient-to-br from-orange-50 to-red-50';
+              case RiskLevel.CRITICAL: return 'bg-gradient-to-br from-red-50 to-rose-100';
+              default: return 'bg-slate-50';
+          }
+      }
+  };
+
   return (
-    <div className={`min-h-screen pb-12 transition-colors duration-300 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`min-h-screen pb-12 transition-all duration-1000 ease-in-out ${getRiskBackground()} ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
       {/* Header */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 transition-colors duration-300">
+      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 sticky top-0 z-[500] transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-blue-600 p-2 rounded-lg">
+            <div className="bg-blue-600 p-2 rounded-lg shadow-md shadow-blue-500/20">
                 <ShieldCheck className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{t.header.title} <span className="text-blue-600 dark:text-blue-400">{t.header.live}</span></h1>
@@ -247,7 +271,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-3">
              <button
                onClick={() => setShowAbout(true)}
-               className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-1.5 rounded-full transition-colors"
+               className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-1.5 rounded-full transition-colors border border-slate-200 dark:border-slate-700"
              >
               <Heart className="w-3 h-3 text-red-500" />
               <span className="hidden sm:inline">{t.header.mission}</span>
@@ -257,7 +281,7 @@ const App: React.FC = () => {
             <div className="relative" ref={languageDropdownRef}>
               <button 
                 onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-bold text-xs"
+                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-bold text-xs border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                 title="Switch Language"
               >
                 <Globe className="w-4 h-4" />
@@ -291,7 +315,7 @@ const App: React.FC = () => {
 
             <button 
               onClick={toggleDarkMode}
-              className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
               title="Toggle Dark Mode"
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -303,14 +327,14 @@ const App: React.FC = () => {
       <main className="max-w-4xl mx-auto px-4 mt-8">
         
         {/* Search Section */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-8 transition-colors duration-300" ref={dropdownRef}>
+        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl shadow-sm border border-slate-200/50 dark:border-slate-800/50 mb-8 transition-colors duration-300" ref={dropdownRef}>
           <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">{t.search.title}</h2>
           <form onSubmit={handleFormSubmit} className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <input
                 type="text"
                 placeholder={t.search.cityPlaceholder}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                className="w-full pl-10 pr-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 value={city}
                 onChange={handleCityChange}
                 onFocus={() => city.trim().length >= 2 && setShowSuggestions(true)}
@@ -342,7 +366,7 @@ const App: React.FC = () => {
                <input
                 type="text"
                 placeholder={t.search.countryPlaceholder}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
               />
@@ -350,7 +374,7 @@ const App: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium py-3 px-8 rounded-xl transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[140px]"
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium py-3 px-8 rounded-xl transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[140px] shadow-lg shadow-blue-600/20"
             >
               {loading ? (
                 <>
@@ -365,7 +389,7 @@ const App: React.FC = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-6 py-4 rounded-xl mb-8 flex items-center gap-3 animate-fade-in">
+          <div className="bg-red-50/80 dark:bg-red-900/40 backdrop-blur-md border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-6 py-4 rounded-xl mb-8 flex items-center gap-3 animate-fade-in">
             <AlertTriangle className="w-5 h-5 shrink-0" />
             <span>{error}</span>
           </div>
@@ -382,7 +406,7 @@ const App: React.FC = () => {
                 <button 
                   onClick={handleShareSnapshot}
                   disabled={isSharing}
-                  className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-1.5 rounded-full transition-colors shadow-sm disabled:opacity-70"
+                  className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 px-3 py-1.5 rounded-full transition-colors shadow-sm disabled:opacity-70"
                 >
                   {isSharing ? (
                       <>
@@ -397,7 +421,7 @@ const App: React.FC = () => {
                 </button>
             </div>
             
-            <div ref={resultsRef} className="space-y-6 bg-slate-50 dark:bg-slate-950 transition-colors duration-300 p-1">
+            <div ref={resultsRef} className="space-y-6 p-2 -m-2 rounded-xl transition-colors duration-300">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <RiskGauge score={result.risk.score} level={result.risk.level} />
                   
@@ -432,7 +456,7 @@ const App: React.FC = () => {
                         <AIReport location={result.location} risk={result.risk} />
                       </div>
 
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-5">
+                      <div className="bg-blue-50/60 dark:bg-blue-900/20 backdrop-blur-xl border border-blue-100 dark:border-blue-800 rounded-xl p-5">
                           <h3 className="text-blue-900 dark:text-blue-300 font-semibold mb-2 flex items-center gap-2">
                               <Info className="w-4 h-4" /> {t.cards.summary}
                           </h3>
@@ -446,7 +470,9 @@ const App: React.FC = () => {
                           </ul>
                       </div>
 
-                      <EmergencyFinder locationName={`${result.location.name}, ${result.location.country}`} />
+                      <div className="sm:col-span-2">
+                        <EmergencyFinder locationName={`${result.location.name}, ${result.location.country}`} />
+                      </div>
                       
                   </div>
                 </div>
@@ -458,7 +484,7 @@ const App: React.FC = () => {
                   darkMode={darkMode}
                 />
 
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300">
+                <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl shadow-sm border border-slate-200/50 dark:border-slate-800/50 transition-colors duration-300">
                     <RainChart weather={result.weather} darkMode={darkMode} />
                 </div>
 
@@ -474,7 +500,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <footer className="max-w-4xl mx-auto px-4 mt-12 mb-8 text-center text-slate-400 dark:text-slate-600 text-xs">
+      <footer className="max-w-4xl mx-auto px-4 mt-12 mb-8 text-center text-slate-500/80 dark:text-slate-400/80 text-xs">
         <p>Data provided by Open-Meteo API. Map tiles by RainViewer & OSM. This tool provides estimates based on heuristics.</p>
         <p className="mt-2">&copy; {new Date().getFullYear()} FloodWatch Live</p>
       </footer>

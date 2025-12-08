@@ -51,7 +51,7 @@ const EmergencyFinder: React.FC<EmergencyFinderProps> = ({ locationName }) => {
     <>
       <button
         onClick={handleOpen}
-        className="w-full h-full min-h-[100px] bg-white dark:bg-slate-900 hover:bg-red-50/50 dark:hover:bg-red-900/10 border border-slate-200 dark:border-slate-800 hover:border-red-200 dark:hover:border-red-900 rounded-2xl p-4 flex flex-row sm:flex-col items-center justify-center gap-4 sm:gap-2 transition-all group shadow-sm"
+        className="w-full h-full min-h-[100px] bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl hover:bg-red-50/50 dark:hover:bg-red-900/10 border border-slate-200 dark:border-slate-800 hover:border-red-200 dark:hover:border-red-900 rounded-2xl p-4 flex flex-row sm:flex-col items-center justify-center gap-4 sm:gap-2 transition-all group shadow-sm"
       >
         <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded-full group-hover:bg-red-100 dark:group-hover:bg-red-900/50 transition-colors shrink-0">
           <Map className="w-6 h-6 text-red-600 dark:text-red-400" />
@@ -67,7 +67,7 @@ const EmergencyFinder: React.FC<EmergencyFinderProps> = ({ locationName }) => {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-slate-900/40 dark:bg-slate-950/70 backdrop-blur-sm transition-opacity"
             onClick={handleClose}

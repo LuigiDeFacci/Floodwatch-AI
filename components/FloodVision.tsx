@@ -12,24 +12,76 @@ const FloodVision: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const processImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Resize if too large (max 1024px) to optimize API latency
+          const MAX_SIZE = 1024;
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error("Canvas context unavailable"));
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to JPEG (universal support)
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          resolve(dataUrl);
+        };
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit before processing
         let msg = "Image size too large.";
         if (language === 'pt') msg = "Imagem muito grande.";
         else if (language === 'es') msg = "Imagen demasiado grande.";
         setError(msg);
         return;
       }
-      
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result as string);
+
+      setLoading(true); // temporary loading state for processing
+      try {
+        // Convert to compatible JPEG format
+        const processedImage = await processImage(file);
+        setImage(processedImage);
         setAnalysis(null);
         setError(null);
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error("Image processing error:", err);
+        setError("Could not process image. Please try another.");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -38,12 +90,13 @@ const FloodVision: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const match = image.match(/^data:(image\/\w+);base64,/);
-      const mimeType = match ? match[1] : 'image/jpeg';
+      // Image is guaranteed to be jpeg from processImage
+      const mimeType = 'image/jpeg'; 
       
       const result = await analyzeFloodImage(image, mimeType, language);
       setAnalysis(result);
     } catch (err) {
+      console.error(err);
       let msg = "AI analysis failed. Please check your connection and try again.";
       if (language === 'pt') msg = "Falha na análise. Tente novamente.";
       else if (language === 'es') msg = "Falló el análisis de IA. Intente de nuevo.";
@@ -72,7 +125,7 @@ const FloodVision: React.FC = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300">
+    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300">
       <div className="flex items-center gap-2 mb-4">
         <div className="bg-indigo-100 dark:bg-indigo-900/50 p-2 rounded-lg">
           <Camera className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -88,11 +141,17 @@ const FloodVision: React.FC = () => {
           onClick={() => fileInputRef.current?.click()}
           className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all group"
         >
-          <div className="mb-3 p-3 bg-slate-100 dark:bg-slate-800 rounded-full group-hover:scale-110 transition-transform">
-            <Upload className="w-6 h-6 text-slate-400 dark:text-slate-500" />
-          </div>
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.vision.upload}</span>
-          <span className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t.vision.uploadSub}</span>
+          {loading ? (
+             <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-3" />
+          ) : (
+            <>
+              <div className="mb-3 p-3 bg-slate-100 dark:bg-slate-800 rounded-full group-hover:scale-110 transition-transform">
+                <Upload className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+              </div>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.vision.upload}</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t.vision.uploadSub}</span>
+            </>
+          )}
           <input 
             type="file" 
             ref={fileInputRef} 

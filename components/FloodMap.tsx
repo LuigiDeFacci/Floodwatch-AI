@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Play, Pause, Loader2, Droplets, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Play, Pause, Loader2, Droplets, TrendingUp, TrendingDown, Minus, Eye, Sparkles } from 'lucide-react';
 import { FloodData, WeatherData } from '../types';
 import { fetchWeatherData } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -24,6 +24,7 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
   const circleRef = useRef<any>(null);
   
   const [timestamps, setTimestamps] = useState<number[]>([]);
+  const [pastFrameCount, setPastFrameCount] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +60,7 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
         layers: [baseLayerRef.current]
       }).setView([lat, lon], 10);
 
+      // Radar group needs a slightly higher z-index to stay above base maps but below markers
       radarGroupRef.current = L.layerGroup().addTo(mapInstanceRef.current);
 
       const baseMaps = {
@@ -209,9 +211,13 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
         const nowcast = data.radar.nowcast ? data.radar.nowcast.map((frame: any) => frame.time) : [];
         const allTimes = [...past, ...nowcast];
         
+        setPastFrameCount(past.length);
         setTimestamps(allTimes);
-        setCurrentIndex(allTimes.length - 1);
-        updateRadarLayer(allTimes[allTimes.length - 1]);
+        
+        // Default to the last "Past" frame (current time), rather than forecast
+        const startIdx = past.length > 0 ? past.length - 1 : allTimes.length - 1;
+        setCurrentIndex(startIdx);
+        updateRadarLayer(allTimes[startIdx]);
       }
     } catch (error) {
       console.error("Failed to load radar data", error);
@@ -223,6 +229,7 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
   const updateRadarLayer = (ts: number) => {
     if (!mapInstanceRef.current || !radarGroupRef.current) return;
     radarGroupRef.current.clearLayers();
+    // Using color scheme 2 (Universal Blue) and smoothing 1_1
     const newLayer = L.tileLayer(`https://tile.rainviewer.com/${ts}/256/{z}/{x}/{y}/2/1_1.png`, {
       opacity: 0.7,
       zIndex: 100,
@@ -234,10 +241,13 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
   const startAnimation = () => {
     if (timestamps.length === 0) return;
     setIsPlaying(true);
+    
+    // If at end, loop back to start
     if (currentIndex === timestamps.length - 1) {
       setCurrentIndex(0);
       updateRadarLayer(timestamps[0]);
     }
+    
     animationRef.current = setInterval(() => {
       setCurrentIndex((prev) => {
         const next = prev + 1;
@@ -274,6 +284,8 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
   const formatTime = (ts: number) => {
     return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  const isForecast = currentIndex >= pastFrameCount;
 
   const getRiverForecast = () => {
     if (!floodData || !floodData.daily || !floodData.daily.river_discharge) return null;
@@ -320,7 +332,7 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
   const riverForecast = getRiverForecast();
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden relative group h-[400px] transition-colors duration-300">
+    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden relative group h-[400px] transition-colors duration-300">
         <div ref={mapContainerRef} className="h-full w-full z-0 relative bg-slate-50 dark:bg-slate-950" />
 
         {riverForecast && riverForecast.length > 0 && (
@@ -344,7 +356,7 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
             </div>
         )}
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent z-[400] flex items-center gap-4 text-white">
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-950/80 to-transparent z-[400] flex items-center gap-4 text-white">
             <button 
                 onClick={togglePlay}
                 className="w-10 h-10 flex items-center justify-center bg-white/20 backdrop-blur-md hover:bg-white/30 rounded-full transition-colors shrink-0"
@@ -352,10 +364,22 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
             </button>
 
-            <div className="flex-1 flex flex-col gap-1">
-                <div className="flex justify-between text-xs font-medium text-white/90 shadow-sm">
+            <div className="flex-1 flex flex-col gap-1.5">
+                <div className="flex justify-between items-center text-xs font-medium text-white/90 shadow-sm">
                     <span>{timestamps.length > 0 ? formatTime(timestamps[currentIndex]) : '--:--'}</span>
-                    <span className="opacity-75">STORM RADAR</span>
+                    
+                    <div className="flex items-center gap-1.5">
+                      {isForecast ? (
+                        <span className="flex items-center gap-1 text-blue-300 bg-blue-900/40 px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase border border-blue-500/30">
+                          <Sparkles className="w-3 h-3" /> {t.chart.forecast}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-emerald-300 bg-emerald-900/40 px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase border border-emerald-500/30">
+                          <Eye className="w-3 h-3" /> {t.chart.observed}
+                        </span>
+                      )}
+                      <span className="opacity-60 hidden sm:inline">| STORM RADAR</span>
+                    </div>
                 </div>
                 <input 
                     type="range" 
@@ -363,7 +387,7 @@ const FloodMap: React.FC<FloodMapProps> = ({ lat, lon, floodData, darkMode = fal
                     max={timestamps.length - 1} 
                     value={currentIndex}
                     onChange={handleSliderChange}
-                    className="w-full h-1.5 bg-white/30 rounded-full appearance-none cursor-pointer"
+                    className="w-full h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer accent-white hover:bg-white/30 transition-colors"
                 />
             </div>
         </div>
