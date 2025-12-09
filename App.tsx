@@ -4,6 +4,7 @@ import { Search, MapPin, CloudRain, AlertTriangle, ShieldCheck, Info, Camera, Do
 import { GeoLocation, WeatherData, RiskAnalysis, FloodData, RiskLevel } from './types';
 import { geocodeLocation, fetchWeatherData, searchCities, fetchFloodData } from './services/api';
 import { calculateFloodRisk } from './services/riskModel';
+import { generateAIReport } from './services/ai';
 import RiskGauge from './components/RiskGauge';
 import RainChart from './components/RainChart';
 import InfoCard from './components/InfoCard';
@@ -36,6 +37,14 @@ const App: React.FC = () => {
 
   const [isSharing, setIsSharing] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+
+  // AI Report State Lifted Up
+  const [aiReport, setAiReport] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  
+  // Voice Control State
+  const [autoSpeakMessage, setAutoSpeakMessage] = useState<string>('');
 
   const [result, setResult] = useState<{
     location: GeoLocation;
@@ -113,13 +122,33 @@ const App: React.FC = () => {
     setShowSuggestions(false);
   };
 
-  const performSearch = async (searchCity: string, searchCountry?: string) => {
+  const handleGenerateAI = async () => {
+    if (!result) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const text = await generateAIReport(result.location, result.risk, language);
+      setAiReport(text);
+    } catch (err) {
+      let msg = "AI service is currently busy. Please try again.";
+      if (language === 'pt') msg = "Serviço ocupado. Tente novamente.";
+      else if (language === 'es') msg = "Servicio ocupado. Intente de nuevo.";
+      setAiError(msg);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const performSearch = async (searchCity: string, searchCountry?: string, isVoice: boolean = false) => {
     if (!searchCity.trim()) return;
 
     setLoading(true);
     setError(null);
     setResult(null);
+    setAiReport(null); // Reset AI report
+    setAiError(null);
     setShowSuggestions(false);
+    setAutoSpeakMessage(''); // Reset voice message
 
     try {
       const location = await geocodeLocation(searchCity, searchCountry, language);
@@ -149,8 +178,52 @@ const App: React.FC = () => {
       const risk = calculateFloodRisk(weather, flood, language);
 
       setResult({ location, weather, risk, flood });
+
+      // If triggered by voice, automatically generate and read AI report
+      if (isVoice) {
+        setAiLoading(true);
+        try {
+          // Generate the report immediately using the fresh data
+          const reportText = await generateAIReport(location, risk, language);
+          setAiReport(reportText);
+          
+          // Construct the speech text
+          let intro = "";
+          const levelText = risk.level; 
+          
+          if (language === 'pt') {
+             intro = `Análise para ${location.name}. Risco ${levelText}. `;
+          } else if (language === 'es') {
+             intro = `Análisis para ${location.name}. Riesgo ${levelText}. `;
+          } else {
+             intro = `Analysis for ${location.name}. Risk level is ${levelText}. `;
+          }
+
+          // Trigger VoiceControl to speak
+          setAutoSpeakMessage(intro + reportText);
+
+        } catch (e) {
+          console.error("Auto-AI generation failed", e);
+          // Fallback speech if AI fails
+          let fallback = "";
+          if (language === 'pt') fallback = `Dados carregados para ${location.name}. O risco é ${risk.level}.`;
+          else if (language === 'es') fallback = `Datos cargados para ${location.name}. El riesgo es ${risk.level}.`;
+          else fallback = `Data loaded for ${location.name}. The risk is ${risk.level}.`;
+          
+          setAutoSpeakMessage(fallback);
+        } finally {
+          setAiLoading(false);
+        }
+      }
+
     } catch (err: any) {
       setError(err.message || t.search.errorGeneric);
+      if (isVoice) {
+         let errorMsg = "Sorry, I couldn't find that location.";
+         if (language === 'pt') errorMsg = "Desculpe, não encontrei esse local.";
+         else if (language === 'es') errorMsg = "Lo siento, no encontré esa ubicación.";
+         setAutoSpeakMessage(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -161,6 +234,7 @@ const App: React.FC = () => {
     if (result) {
         const newRisk = calculateFloodRisk(result.weather, result.flood, language);
         setResult({ ...result, risk: newRisk });
+        // NOTE: We do not auto-regenerate AI report on lang switch to save tokens, user can click button.
     }
   }, [language]);
 
@@ -222,17 +296,6 @@ const App: React.FC = () => {
     }
   };
 
-  const getReadOutText = () => {
-      if (!result) return undefined;
-      const { risk, location } = result;
-      // Simple dynamic construction based on localized risk level
-      const intro = language === 'pt' 
-        ? `Relatório para ${location.name}. O risco de enchente é ${risk.level}, com pontuação ${risk.score} de 100.`
-        : `Report for ${location.name}. The flood risk is ${risk.level}, with a score of ${risk.score} out of 100.`;
-      
-      return intro;
-  };
-
   // Dynamic Background based on Risk
   const getRiskBackground = () => {
       if (!result) return darkMode ? 'bg-slate-950' : 'bg-slate-50';
@@ -255,6 +318,23 @@ const App: React.FC = () => {
               default: return 'bg-slate-50';
           }
       }
+  };
+
+  const getVoiceReadOutText = () => {
+      if (!result) return undefined;
+      // If we have an AI report, prefer that combined text, otherwise default
+      if (aiReport) {
+          return autoSpeakMessage; // Already constructed
+      }
+      
+      const { risk, location } = result;
+      const intro = language === 'pt' 
+        ? `Relatório para ${location.name}. O risco de enchente é ${risk.level}, com pontuação ${risk.score} de 100.`
+        : language === 'es'
+        ? `Reporte para ${location.name}. El riesgo de inundación es ${risk.level}, con puntuación ${risk.score} de 100.`
+        : `Report for ${location.name}. The flood risk is ${risk.level}, with a score of ${risk.score} out of 100.`;
+      
+      return intro;
   };
 
   return (
@@ -453,10 +533,18 @@ const App: React.FC = () => {
                       )}
                       
                       <div className="sm:col-span-2">
-                        <AIReport location={result.location} risk={result.risk} />
+                        <AIReport 
+                          location={result.location} 
+                          risk={result.risk} 
+                          report={aiReport}
+                          loading={aiLoading}
+                          error={aiError}
+                          onGenerate={handleGenerateAI}
+                          onClose={() => setAiReport(null)}
+                        />
                       </div>
 
-                      <div className="bg-blue-50/60 dark:bg-blue-900/20 backdrop-blur-xl border border-blue-100 dark:border-blue-800 rounded-xl p-5">
+                      <div className="bg-blue-50/60 dark:bg-blue-900/20 backdrop-blur-xl border border-blue-100 dark:border-blue-800 rounded-xl p-5 h-full">
                           <h3 className="text-blue-900 dark:text-blue-300 font-semibold mb-2 flex items-center gap-2">
                               <Info className="w-4 h-4" /> {t.cards.summary}
                           </h3>
@@ -470,7 +558,7 @@ const App: React.FC = () => {
                           </ul>
                       </div>
 
-                      <div className="sm:col-span-2">
+                      <div>
                         <EmergencyFinder locationName={`${result.location.name}, ${result.location.country}`} />
                       </div>
                       
@@ -505,7 +593,11 @@ const App: React.FC = () => {
         <p className="mt-2">&copy; {new Date().getFullYear()} FloodWatch Live</p>
       </footer>
       
-      <VoiceControl onSearch={performSearch} readOutText={getReadOutText()} />
+      <VoiceControl 
+        onSearch={performSearch} 
+        readOutText={getVoiceReadOutText()} 
+        autoSpeakMessage={autoSpeakMessage}
+      />
       <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
     </div>
   );

@@ -4,11 +4,12 @@ import { Mic, MicOff, Volume2, VolumeX, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface VoiceControlProps {
-  onSearch: (city: string, country?: string) => void;
+  onSearch: (city: string, country?: string, isVoice?: boolean) => void;
   readOutText?: string;
+  autoSpeakMessage?: string;
 }
 
-const VoiceControl: React.FC<VoiceControlProps> = ({ onSearch, readOutText }) => {
+const VoiceControl: React.FC<VoiceControlProps> = ({ onSearch, readOutText, autoSpeakMessage }) => {
   const { t, language } = useLanguage();
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -60,6 +61,13 @@ const VoiceControl: React.FC<VoiceControlProps> = ({ onSearch, readOutText }) =>
     updateRecognitionLang();
   }, [language]);
 
+  // Handle Automatic Speaking
+  useEffect(() => {
+    if (autoSpeakMessage && autoSpeakMessage.trim().length > 0) {
+        speak(autoSpeakMessage);
+    }
+  }, [autoSpeakMessage]);
+
   useEffect(() => {
     const interval = setInterval(() => {
         setIsSpeaking(window.speechSynthesis.speaking);
@@ -95,7 +103,8 @@ const VoiceControl: React.FC<VoiceControlProps> = ({ onSearch, readOutText }) =>
         else if (language === 'es') msg = `Buscando ${city}`;
         
         speak(msg);
-        onSearch(city);
+        // Trigger with voice flag true
+        onSearch(city, undefined, true);
       } else {
         let msg = "I didn't catch the city name.";
         if (language === 'pt') msg = "Não entendi o nome da cidade.";
@@ -164,13 +173,13 @@ const VoiceControl: React.FC<VoiceControlProps> = ({ onSearch, readOutText }) =>
 
   return (
     <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
-      {readOutText && (
+      {(readOutText || autoSpeakMessage) && (
           <button
             onClick={toggleSpeaking}
-            className={`p-3 rounded-full shadow-lg transition-all transform hover:scale-105 flex items-center justify-center ${
+            className={`p-3 rounded-full shadow-lg transition-all transform hover:scale-105 flex items-center justify-center backdrop-blur-md ${
                 isSpeaking 
-                ? 'bg-indigo-600 text-white animate-pulse ring-4 ring-indigo-200 dark:ring-indigo-900' 
-                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-700'
+                ? 'bg-indigo-600/90 text-white animate-pulse ring-4 ring-indigo-200/50 dark:ring-indigo-900/50' 
+                : 'bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-700'
             }`}
           >
             {isSpeaking ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
@@ -179,23 +188,23 @@ const VoiceControl: React.FC<VoiceControlProps> = ({ onSearch, readOutText }) =>
 
       <button
         onClick={toggleListening}
-        className={`p-4 rounded-full shadow-lg transition-all transform hover:scale-105 flex items-center justify-center ${
+        className={`p-4 rounded-full shadow-lg transition-all transform hover:scale-105 flex items-center justify-center backdrop-blur-md ${
           isListening 
-            ? 'bg-red-500 text-white ring-4 ring-red-200 dark:ring-red-900' 
-            : 'bg-blue-600 text-white hover:bg-blue-700'
+            ? 'bg-red-500/90 text-white ring-4 ring-red-200/50 dark:ring-red-900/50' 
+            : 'bg-blue-600/90 text-white hover:bg-blue-700/90'
         }`}
       >
         {isListening ? <MicOff className="w-6 h-6 animate-pulse" /> : <Mic className="w-6 h-6" />}
       </button>
       
       {isListening && (
-          <div className="absolute right-16 bottom-4 bg-slate-900 dark:bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap animate-fade-in shadow-lg">
+          <div className="absolute right-16 bottom-4 bg-slate-900/90 dark:bg-slate-800/90 text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap animate-fade-in shadow-lg backdrop-blur-md">
               {t.voice.listening}
           </div>
       )}
 
       {permissionError && (
-          <div className="absolute right-16 bottom-4 bg-red-600 text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap animate-fade-in flex items-center gap-1 shadow-lg">
+          <div className="absolute right-16 bottom-4 bg-red-600/90 text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap animate-fade-in flex items-center gap-1 shadow-lg backdrop-blur-md">
               <AlertCircle className="w-3 h-3" /> {t.voice.denied}
           </div>
       )}
